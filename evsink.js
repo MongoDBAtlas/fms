@@ -3,9 +3,29 @@ import { fmscol } from "./mongocli.js";
 const wbuf = [];
 async function kinematic_handler(kid) {
   const blen = wbuf.push(kid);
-  if (blen === 60 || kid.status.engine === "OFF") {
-    const res = await fmscol.insertMany(wbuf, { ordered: false });
+  if (blen === 60000) {
+    const res = await fmscol.insertMany(wbuf, {
+      writeConcern: { w: 1 },
+      ordered: false,
+    });
     wbuf.length = 0;
+    return res;
+  } else {
+    return {
+      acknowledged: false,
+      insertedCount: 0,
+    };
+  }
+}
+
+export async function flush_source() {
+  if (wbuf.length > 0) {
+    const res = await fmscol.insertMany(wbuf, {
+      writeConcern: { w: 1 },
+      ordered: false,
+    });
+    wbuf.length = 0;
+    console.log(inc().zeroPad(10000) + "  flushed:", res.insertedCount);
     return res;
   } else {
     return {
@@ -46,6 +66,13 @@ export async function statusSink(ste) {
   }
 }
 
+let inc = (function (iv) {
+  let i = iv;
+  return function () {
+    return ++i;
+  };
+})(0);
+
 export async function kinematicSink(kie) {
   let kid = (({
     command_id,
@@ -60,6 +87,6 @@ export async function kinematicSink(kie) {
   kid["status"] = lastStatus[kid.fleet_intg_id];
   const res = await kinematic_handler(kid);
   if (res.acknowledged) {
-    console.log("---- inserted:", res.insertedCount);
+    console.log(inc().zeroPad(10000) + " inserted:", res.insertedCount);
   }
 }

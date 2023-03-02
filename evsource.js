@@ -1,8 +1,8 @@
 import mgen from "mgeneratejs";
 import { status_template, kinematic_template } from "./template.js";
 import nopt from "nopt";
-import { statusSink, kinematicSink } from "./evsink.js";
-import { cli_init } from "./mongocli.js";
+import { statusSink, kinematicSink, flush_source } from "./evsink.js";
+import { fmscol, cli_init } from "./mongocli.js";
 
 function gen_vins(nVins) {
   const vinseed = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789";
@@ -52,7 +52,7 @@ async function gen_kinematic_info(evStatus) {
 }
 
 async function gen_vehical_status(vin, customer_id, fleet_id, lasttime) {
-  let running_min = 3; // TODO; fix time
+  let running_min = 3 * 60; // 3-hr driving before 1-hr rest
   let template = {
     ...status_template,
     customer_id: customer_id,
@@ -95,12 +95,12 @@ async function gen_status(vins, starttime) {
   let start, jitter, vin;
   for (let index = 0; index < vins.length; index++) {
     vin = vins[index];
-    jitter = Math.random() * 21 * 60 * 1000;
+    jitter = Math.random() * 21 * 60 * 1000; // top of the hour +/- 10min
     start = new Date(starttime.getTime() + jitter);
     await gen_vehical_status(
       vin,
       (index % 10) + 1,
-      (index + 1).zeroPad(1000),
+      (index + 1).zeroPad(10000),
       start,
     );
   }
@@ -121,9 +121,24 @@ async function gen_events(nVins) {
 async function main(args) {
   const bBig = args["bigfleet"];
   const bClean = args["clean"] ?? false;
-  const nVins = bBig ? 10 : 1; // TODO; fix scale
+  const nVins = bBig ? 10000 : 1000;
+
   await cli_init(bBig, bClean);
+
+  const timeStart = new Date();
   await gen_events(nVins);
+  await flush_source();
+  const timeEnd = new Date();
+
+  console.log("> start time  :", timeStart);
+  console.log("> end time    :", timeEnd);
+  console.log("> elapsed secs:", timeEnd.getTime() - timeStart.getTime());
+
+  console.log("> create asc index for { customer_id, fleet_intg_id }");
+  await fmscol.createIndex({
+    customer_id: 1,
+    fleet_intg_id: 1,
+  });
 
   process.exit(0);
 }
