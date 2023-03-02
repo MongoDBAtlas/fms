@@ -2,6 +2,7 @@ import mgen from "mgeneratejs";
 import { status_template, kinematic_template } from "./template.js";
 import nopt from "nopt";
 import { statusSink, kinematicSink } from "./evsink.js";
+import { cli_init } from "./mongocli.js";
 
 function gen_vins(nVins) {
   const vinseed = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789";
@@ -105,10 +106,14 @@ function gen_events(nVins) {
   running_rounds.forEach((st) => gen_status(vins, st));
 }
 
-function main(args) {
-  const nVins = args["bigfleet"] ? 10 : 1;
+async function main(args) {
+  const bBig = args["bigfleet"];
   const bClean = args["clean"] ?? false;
+  const nVins = bBig ? 10 : 1; // TODO; fix scale
+  await cli_init(bBig, bClean);
   gen_events(nVins);
+
+  process.exit(0);
 }
 
 const knownOpts = {
@@ -120,4 +125,4 @@ const knownOpts = {
     c: ["--clean"],
   };
 
-main(nopt(knownOpts, shortHands, process.argv, 2));
+await main(nopt(knownOpts, shortHands, process.argv, 2));

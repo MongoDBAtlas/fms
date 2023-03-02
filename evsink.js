@@ -1,3 +1,5 @@
+import { fmscol as co } from "./mongocli.js";
+
 let lastStatus = {};
 
 export function statusSink(ste) {
@@ -22,6 +24,7 @@ export function statusSink(ste) {
       customer_id: ste.customer_id,
       fleet_intg_id: ste.fleet_intg_id,
       vin: ste.vin,
+      timestamp_iso: std.timestamp_iso,
       status: std,
     };
     kinematicSink(kid);
@@ -40,6 +43,4 @@ export function kinematicSink(kie) {
   }) => kid)(kie);
 
   kid["status"] = lastStatus[kid.fleet_intg_id];
-
-  console.log(kid);
 }
