@@ -16,7 +16,7 @@ export const status_template = {
   loc: "$point",
   charge_level: -2,
   speed: { $integer: { min: 80, max: 110 } },
-  voltage: { $decimal: { fixed: 1, min: 14, max: 15.8 } },
+  voltage: { $integer: { min: 140, max: 158 } },
   charge_percent: { $integer: { min: 30, max: 100 } },
   engine: "ON",
   charge_state: "NONE",
@@ -42,19 +42,19 @@ export const kinematic_template = {
     hz: 20,
     x: {
       $array: {
-        of: { $decimal: { fixed: 3, min: 0.5, max: 0.9 } },
+        of: { $integer: { min: 5, max: 9 } },
         number: 20,
       },
     },
     y: {
       $array: {
-        of: { $decimal: { fixed: 3, min: 0.5, max: 0.9 } },
+        of: { $integer: { min: 5, max: 9 } },
         number: 20,
       },
     },
     z: {
       $array: {
-        of: { $decimal: { fixed: 3, min: 0.5, max: 0.9 } },
+        of: { $integer: { min: 5, max: 9 } },
         number: 20,
       },
     },

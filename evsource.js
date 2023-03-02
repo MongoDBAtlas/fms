@@ -24,7 +24,7 @@ function gen_vins(nVins) {
 }
 
 let kinematic_start, kinematic_end;
-function gen_kinematic_info(evStatus) {
+async function gen_kinematic_info(evStatus) {
   let evsec = evStatus.timestamp_iso.getTime();
   let round_end = evsec + 60 * 1000;
   if (round_end <= kinematic_start) return;
@@ -41,14 +41,17 @@ function gen_kinematic_info(evStatus) {
   while (evsec < round_end) {
     kme = mgen(template);
     kme.timestamp_iso = new Date(evsec);
-    kinematicSink(kme);
+    kme.accmag.x = kme.accmag.x.map((v) => v / 10);
+    kme.accmag.y = kme.accmag.y.map((v) => v / 10);
+    kme.accmag.z = kme.accmag.z.map((v) => v / 10);
+    await kinematicSink(kme);
 
     evsec = evsec + 1000;
     if (evsec >= kinematic_end) break;
   }
 }
 
-function gen_vehical_status(vin, customer_id, fleet_id, lasttime) {
+async function gen_vehical_status(vin, customer_id, fleet_id, lasttime) {
   let running_min = 3; // TODO; fix time
   let template = {
     ...status_template,
@@ -67,8 +70,9 @@ function gen_vehical_status(vin, customer_id, fleet_id, lasttime) {
   while (running_min > 0) {
     ste = mgen(template);
     ste.timestamp_iso = new Date(lasttime);
-    statusSink(ste);
-    gen_kinematic_info(ste);
+    ste.voltage /= 10;
+    await statusSink(ste);
+    await gen_kinematic_info(ste);
     running_min--;
     lasttime += 60 * 1000;
   }
@@ -76,7 +80,7 @@ function gen_vehical_status(vin, customer_id, fleet_id, lasttime) {
   ste = mgen(template);
   ste.timestamp_iso = new Date(lasttime);
   ste.engine = "OFF";
-  statusSink(ste);
+  await statusSink(ste);
 }
 
 Number.prototype.zeroPad =
@@ -87,23 +91,31 @@ Number.prototype.zeroPad =
     return len > 0 ? new Array(len).join("0") + nr : nr;
   };
 
-function gen_status(vins, starttime) {
-  let start, jitter;
-  vins.forEach((vin, index) => {
+async function gen_status(vins, starttime) {
+  let start, jitter, vin;
+  for (let index = 0; index < vins.length; index++) {
+    vin = vins[index];
     jitter = Math.random() * 21 * 60 * 1000;
     start = new Date(starttime.getTime() + jitter);
-    gen_vehical_status(vin, (index % 10) + 1, (index + 1).zeroPad(1000), start);
-  });
+    await gen_vehical_status(
+      vin,
+      (index % 10) + 1,
+      (index + 1).zeroPad(1000),
+      start,
+    );
+  }
 }
 
-function gen_events(nVins) {
+async function gen_events(nVins) {
   const running_rounds = [
     new Date("2023-03-08T07:50:00+09:00"),
     new Date("2023-03-08T11:50:00+09:00"),
     new Date("2023-03-08T15:50:00+09:00"),
   ];
   const vins = gen_vins(nVins);
-  running_rounds.forEach((st) => gen_status(vins, st));
+  for (const st of running_rounds) {
+    await gen_status(vins, st);
+  }
 }
 
 async function main(args) {
@@ -111,7 +123,7 @@ async function main(args) {
   const bClean = args["clean"] ?? false;
   const nVins = bBig ? 10 : 1; // TODO; fix scale
   await cli_init(bBig, bClean);
-  gen_events(nVins);
+  await gen_events(nVins);
 
   process.exit(0);
 }
