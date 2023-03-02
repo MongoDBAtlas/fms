@@ -1,6 +1,7 @@
 import mgen from "mgeneratejs";
 import { status_template, kinematic_template } from "./template.js";
 import nopt from "nopt";
+import { statusSink, kinematicSink } from "./evsink.js";
 
 function gen_vins(nVins) {
   const vinseed = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789";
@@ -39,8 +40,7 @@ function gen_kinematic_info(evStatus) {
   while (evsec < round_end) {
     kme = mgen(template);
     kme.timestamp_iso = new Date(evsec);
-    // console.log(kme);
-    // TODO; call sink
+    kinematicSink(kme);
 
     evsec = evsec + 1000;
     if (evsec >= kinematic_end) break;
@@ -66,8 +66,7 @@ function gen_vehical_status(vin, customer_id, fleet_id, lasttime) {
   while (running_min > 0) {
     ste = mgen(template);
     ste.timestamp_iso = new Date(lasttime);
-    console.log("ongoing", ste);
-    // TODO; call sink
+    statusSink(ste);
     gen_kinematic_info(ste);
     running_min--;
     lasttime += 60 * 1000;
@@ -76,8 +75,7 @@ function gen_vehical_status(vin, customer_id, fleet_id, lasttime) {
   ste = mgen(template);
   ste.timestamp_iso = new Date(lasttime);
   ste.engine = "OFF";
-  console.log("engine:off", ste);
-  // TODO; call sink
+  statusSink(ste);
 }
 
 Number.prototype.zeroPad =

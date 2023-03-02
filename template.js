@@ -7,7 +7,7 @@ export const status_template = {
   vin: null,
   command: "get_status",
   object: "vehicle",
-  messaged_at: "",
+  message_at: "",
   timestamp_iso: "",
   fuel_percent: { $integer: { min: 40, max: 100 } },
   odometer: 0,

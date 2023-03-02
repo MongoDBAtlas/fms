@@ -10,7 +10,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^16.0.3",
     "mgeneratejs": "^0.6.0",
+    "mongodb": "^5.1.0",
     "nopt": "^7.0.0"
   },
   "type": "module"
