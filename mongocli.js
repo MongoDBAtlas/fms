@@ -30,7 +30,7 @@ async function cli_init(bBig, bClean) {
     const col = await cli.db(DB).createCollection(CO, {
       timeseries: {
         timeField: "timestamp_iso",
-        metaField: "fleet_intg_id",
+        metaField: "vehicle",
         granularity: "seconds",
       },
     });

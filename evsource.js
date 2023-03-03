@@ -136,8 +136,16 @@ async function main(args) {
 
   console.log("> create asc index for { customer_id, fleet_intg_id }");
   await fmscol.createIndex({
-    customer_id: 1,
-    fleet_intg_id: 1,
+    "vehicle.customer_id": 1,
+    "vehicle.fleet_intg_id": 1,
+  });
+  console.log("> create asc index for { vehicle.fleet_intg_id }");
+  await fmscol.createIndex({
+    "vehicle.fleet_intg_id": 1,
+  });
+  console.log("> create asc index for { vehicle }");
+  await fmscol.createIndex({
+    vehicle: 1,
   });
 
   process.exit(0);

@@ -3,7 +3,7 @@ import { fmscol } from "./mongocli.js";
 const wbuf = [];
 async function kinematic_handler(kid) {
   const blen = wbuf.push(kid);
-  if (blen === 60000) {
+  if (blen === 100000) {
     const res = await fmscol.insertMany(wbuf, {
       writeConcern: { w: 1 },
       ordered: false,
@@ -55,14 +55,14 @@ export async function statusSink(ste) {
   lastStatus[ste.fleet_intg_id] = std;
 
   if (std.engine === "OFF") {
-    let kid = {
+    let kie = {
       customer_id: ste.customer_id,
       fleet_intg_id: ste.fleet_intg_id,
       vin: ste.vin,
       timestamp_iso: std.timestamp_iso,
       status: std,
     };
-    await kinematicSink(kid);
+    await kinematicSink(kie);
   }
 }
 
@@ -81,10 +81,16 @@ export async function kinematicSink(kie) {
     object,
     type,
     message_at,
+    customer_id,
+    fleet_intg_id,
     ...kid
   }) => kid)(kie);
 
-  kid["status"] = lastStatus[kid.fleet_intg_id];
+  kid["status"] = lastStatus[kie.fleet_intg_id];
+  kid["vehicle"] = {
+    customer_id: kie.customer_id,
+    fleet_intg_id: kie.fleet_intg_id,
+  };
   const res = await kinematic_handler(kid);
   if (res.acknowledged) {
     console.log(inc().zeroPad(10000) + " inserted:", res.insertedCount);
