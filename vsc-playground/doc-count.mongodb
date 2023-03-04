@@ -1,0 +1,9 @@
+// use("fmsk");
+
+const aggregation = [
+  {
+    $count: 'nDoc'
+  }
+];
+
+db.kinematic_info.aggregate(aggregation);

@@ -1,0 +1,16 @@
+// use("fmsk");
+
+const aggregation = [
+  {
+    $group: {
+      _id: "$vehicle.customer_id",
+    }
+  },
+  {
+    $sort: {
+      _id: 1
+    }
+  }
+];
+
+db.kinematic_info.aggregate(aggregation);

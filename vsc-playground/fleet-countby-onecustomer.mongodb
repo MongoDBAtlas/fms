@@ -1,0 +1,19 @@
+// use("fmsk");
+
+const aggregation = [
+  {
+    $match: {
+      'vehicle.customer_id': 3
+    }
+  },
+  {
+    $group: {
+      _id: '$vehicle.fleet_intg_id'
+    }
+  },
+  {
+    $count: 'nVehicles'
+  }
+];
+
+db.kinematic_info.aggregate(aggregation);

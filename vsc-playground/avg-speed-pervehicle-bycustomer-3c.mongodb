@@ -1,0 +1,42 @@
+// use("fmsk");
+
+const aggregation = [
+  {
+    $match: {
+      timestamp_iso: {
+        $gt: ISODate('2023-03-08T16:00:00+09:00'),
+        $lte: ISODate('2023-03-08T17:00:00+09:00')
+      },
+      'vehicle.customer_id': {
+        $gte: 7, $lte: 9
+      }
+    }
+  },
+  {
+    $setWindowFields: {
+      partitionBy: '$vehicle.fleet_intg_id',
+      sortBy: { timestamp_iso: 1},
+      output: {
+        avgSpeedPerHourVehicle: {
+          $avg: '$speed',
+          window: {
+            range: [-1, 'current'],
+            unit: 'hour'
+          }
+        }
+      }
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      fleet_id: '$vehicle.fleet_intg_id',
+      time: '$timestamp_iso',
+      speed: {
+        $round: ['$avgSpeedPerHourVehicle', 2]
+      }
+    }
+  }
+];
+
+db.kinematic_info.aggregate(aggregation);
