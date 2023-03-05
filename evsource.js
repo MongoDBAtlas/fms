@@ -117,6 +117,7 @@ Number.prototype.zeroPad =
   };
 
 async function gen_status(vins, starttime) {
+  const nFleetPerCustomer = vins.length / 100;
   let start, jitter, vin;
   for (let index = 0; index < vins.length; index++) {
     vin = vins[index];
@@ -124,7 +125,7 @@ async function gen_status(vins, starttime) {
     start = new Date(starttime.getTime() + jitter);
     await gen_vehical_status(
       vin,
-      (index % 10) + 1,
+      (index % nFleetPerCustomer) + 1,
       (index + 1).zeroPad(10000),
       start,
     );
