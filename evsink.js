@@ -1,15 +1,18 @@
 import { fmscol } from "./mongocli.js";
+import { BSD } from "./bsondumper.js";
 
 const wbuf = [];
 async function kinematic_handler(kid) {
   const blen = wbuf.push(kid);
   if (blen === 100000) {
-    const res = await fmscol.insertMany(wbuf, {
-      writeConcern: { w: 1 },
-      ordered: false,
-    });
+    for (const json of wbuf) {
+      BSD().dump(json);
+    }
     wbuf.length = 0;
-    return res;
+    return {
+      acknowledged: true,
+      insertedCount: 100000,
+    };
   } else {
     return {
       acknowledged: false,
@@ -20,13 +23,16 @@ async function kinematic_handler(kid) {
 
 export async function flush_source() {
   if (wbuf.length > 0) {
-    const res = await fmscol.insertMany(wbuf, {
-      writeConcern: { w: 1 },
-      ordered: false,
-    });
+    for (const json of wbuf) {
+      BSD().dump(json);
+    }
+    const nwrite = wbuf.length;
     wbuf.length = 0;
-    console.log(inc().zeroPad(10000) + "  flushed:", res.insertedCount);
-    return res;
+    console.log(inc().zeroPad(10000) + "  flushed:", nwrite);
+    return {
+      acknowledged: true,
+      insertedCount: nwrite,
+    };
   } else {
     return {
       acknowledged: false,

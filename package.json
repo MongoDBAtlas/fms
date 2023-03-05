@@ -13,7 +13,10 @@
     "dotenv": "^16.0.3",
     "mgeneratejs": "^0.6.0",
     "mongodb": "^5.1.0",
-    "nopt": "^7.0.0"
+    "nopt": "^7.0.0",
+    "path": "^0.12.7",
+    "random": "^4.1.0",
+    "seedrandom": "^3.0.5"
   },
   "type": "module"
 }

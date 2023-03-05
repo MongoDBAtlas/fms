@@ -3,6 +3,17 @@ import { status_template, kinematic_template } from "./template.js";
 import nopt from "nopt";
 import { statusSink, kinematicSink, flush_source } from "./evsink.js";
 import { fmscol, cli_init } from "./mongocli.js";
+import path from "path";
+import { BSD } from "./bsondumper.js";
+import { Random } from "random";
+import seedrandom from "seedrandom";
+
+const rng = (function () {
+  const prng = new Random(seedrandom(new Date().getTime().toString()));
+  return function () {
+    return prng.float();
+  };
+})();
 
 function gen_vins(nVins) {
   const vinseed = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789";
@@ -24,7 +35,7 @@ function gen_vins(nVins) {
 }
 
 function newspeed(speed) {
-  let inc = Math.floor(Math.random() * 11) - 3;
+  let inc = Math.floor(rng() * 11) - 3;
   speed += inc;
   speed = Math.min(speed, 140);
   speed = Math.max(10, speed);
@@ -32,14 +43,14 @@ function newspeed(speed) {
 }
 
 function rpm() {
-  let rpm = Math.floor(Math.random() * 16);
+  let rpm = Math.floor(rng() * 16);
   return 3000 + rpm * 100;
 }
 
 function shuffleaccmag(accmag) {
-  accmag.x.sort(() => Math.random() - 0.5);
-  accmag.y.sort(() => Math.random() - 0.5);
-  accmag.z.sort(() => Math.random() - 0.5);
+  accmag.x.sort(() => rng() - 0.5);
+  accmag.y.sort(() => rng() - 0.5);
+  accmag.z.sort(() => rng() - 0.5);
 }
 
 let kinematic_start, kinematic_end;
@@ -88,9 +99,8 @@ async function gen_vehical_status(vin, customer_id, fleet_id, lasttime) {
 
   let ste = mgen(template);
   lasttime = lasttime.getTime();
-  kinematic_start = lasttime + Math.random() * 60 * 1000 + 30 * 1000;
-  kinematic_end =
-    lasttime + (running_min - 1) * 60 * 1000 - Math.random() * 50 * 1000;
+  kinematic_start = lasttime + rng() * 60 * 1000 + 30 * 1000;
+  kinematic_end = lasttime + (running_min - 1) * 60 * 1000 - rng() * 50 * 1000;
   // console.log(new Date(kinematic_start), new Date(kinematic_end));
   running_min -= 1;
   while (running_min > 0) {
@@ -121,7 +131,7 @@ async function gen_status(vins, starttime) {
   let start, jitter, vin;
   for (let index = 0; index < vins.length; index++) {
     vin = vins[index];
-    jitter = Math.random() * 21 * 60 * 1000; // top of the hour +/- 10min
+    jitter = rng() * 21 * 60 * 1000; // top of the hour +/- 10min
     start = new Date(starttime.getTime() + jitter);
     await gen_vehical_status(
       vin,
@@ -147,15 +157,18 @@ async function gen_events(nVins) {
 async function main(args) {
   const bBig = args["bigfleet"];
   const bClean = args["clean"] ?? false;
+  const fpath = args["file"];
   const nVins = bBig ? 2000 : 1000;
 
   await cli_init(bBig, bClean);
+  BSD(fpath);
 
   console.log(`> generate vin[${nVins}]...`);
   const timeStart = new Date();
   await gen_events(nVins);
   await flush_source();
   const timeEnd = new Date();
+  BSD().close();
 
   console.log("> start time  :", timeStart);
   console.log("> end time    :", timeEnd);
@@ -181,10 +194,12 @@ async function main(args) {
 const knownOpts = {
     bigfleet: Boolean,
     clean: Boolean,
+    file: path,
   },
   shortHands = {
     b: ["--bigfleet"],
     c: ["--clean"],
+    f: ["--file"],
   };
 
 await main(nopt(knownOpts, shortHands, process.argv, 2));
