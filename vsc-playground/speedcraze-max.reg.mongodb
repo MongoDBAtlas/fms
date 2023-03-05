@@ -4,7 +4,7 @@ const aggregation = [
   {
     $match: {
       speed: {
-        $gt: 108
+        $gt: 130
       }
     }
   },

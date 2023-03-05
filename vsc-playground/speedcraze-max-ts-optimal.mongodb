@@ -2,13 +2,6 @@
 
 const aggregation = [
   {
-    $match: {
-      speed: {
-        $gt: 108
-      }
-    }
-  },
-  {
     $group: {
       _id: '$vehicle',
       max: {
@@ -17,7 +10,11 @@ const aggregation = [
     }
   },
   {
-    $sort: { timestamp_iso: 1 }
+    $match: {
+      max: {
+        $gt: 130
+      }
+    }
   }
 ];
 
