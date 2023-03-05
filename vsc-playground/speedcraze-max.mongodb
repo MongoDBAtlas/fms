@@ -1,0 +1,21 @@
+// use("fmsk");
+
+const aggregation = [
+  {
+    $match: {
+      speed: {
+        $gt: 108
+      }
+    }
+  },
+  {
+    $group: {
+      _id: '$vehicle',
+      max: {
+        $max: '$speed'
+      }
+    }
+  },
+];
+
+db.kinematic_info.aggregate(aggregation);
