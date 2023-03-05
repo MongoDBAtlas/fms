@@ -23,6 +23,25 @@ function gen_vins(nVins) {
   return vins;
 }
 
+function newspeed(speed) {
+  let inc = Math.floor(Math.random() * 11) - 3;
+  speed += inc;
+  speed = Math.min(speed, 140);
+  speed = Math.max(10, speed);
+  return speed;
+}
+
+function rpm() {
+  let rpm = Math.floor(Math.random() * 16);
+  return 3000 + rpm * 100;
+}
+
+function shuffleaccmag(accmag) {
+  accmag.x.sort(() => Math.random() - 0.5);
+  accmag.y.sort(() => Math.random() - 0.5);
+  accmag.z.sort(() => Math.random() - 0.5);
+}
+
 let kinematic_start, kinematic_end;
 async function gen_kinematic_info(evStatus) {
   let evsec = evStatus.timestamp_iso.getTime();
@@ -36,19 +55,26 @@ async function gen_kinematic_info(evStatus) {
     fleet_intg_id: evStatus.fleet_intg_id,
     vin: evStatus.vin,
   };
-  let kme;
+  let kme = mgen(template);
+  kme.accmag.x = kme.accmag.x.map((v) => v / 10);
+  kme.accmag.y = kme.accmag.y.map((v) => v / 10);
+  kme.accmag.z = kme.accmag.z.map((v) => v / 10);
+  let speed = evStatus.speed;
+  let x, y, z;
 
   while (evsec < round_end) {
-    kme = mgen(template);
     kme.timestamp_iso = new Date(evsec);
-    kme.accmag.x = kme.accmag.x.map((v) => v / 10);
-    kme.accmag.y = kme.accmag.y.map((v) => v / 10);
-    kme.accmag.z = kme.accmag.z.map((v) => v / 10);
+    kme.speed = newspeed(speed);
+    kme.rpm = rpm();
+    shuffleaccmag(kme.accmag);
     await kinematicSink(kme);
 
+    speed = kme.speed;
     evsec = evsec + 1000;
     if (evsec >= kinematic_end) break;
   }
+
+  evStatus.speed = newspeed(speed);
 }
 
 async function gen_vehical_status(vin, customer_id, fleet_id, lasttime) {
@@ -60,7 +86,7 @@ async function gen_vehical_status(vin, customer_id, fleet_id, lasttime) {
     vin: vin,
   };
 
-  let ste;
+  let ste = mgen(template);
   lasttime = lasttime.getTime();
   kinematic_start = lasttime + Math.random() * 60 * 1000 + 30 * 1000;
   kinematic_end =
@@ -68,7 +94,6 @@ async function gen_vehical_status(vin, customer_id, fleet_id, lasttime) {
   // console.log(new Date(kinematic_start), new Date(kinematic_end));
   running_min -= 1;
   while (running_min > 0) {
-    ste = mgen(template);
     ste.timestamp_iso = new Date(lasttime);
     ste.voltage /= 10;
     await statusSink(ste);
@@ -77,7 +102,7 @@ async function gen_vehical_status(vin, customer_id, fleet_id, lasttime) {
     lasttime += 60 * 1000;
   }
 
-  ste = mgen(template);
+  ste.speed = 0;
   ste.timestamp_iso = new Date(lasttime);
   ste.engine = "OFF";
   await statusSink(ste);
@@ -121,10 +146,11 @@ async function gen_events(nVins) {
 async function main(args) {
   const bBig = args["bigfleet"];
   const bClean = args["clean"] ?? false;
-  const nVins = bBig ? 10000 : 1000;
+  const nVins = bBig ? 2000 : 1000;
 
   await cli_init(bBig, bClean);
 
+  console.log(`> generate vin[${nVins}]...`);
   const timeStart = new Date();
   await gen_events(nVins);
   await flush_source();
