@@ -156,17 +156,17 @@ Once done with generation, the bson file can be uploaded to **Atlas** via [`mong
 
 - While users see the total number of documents through `Time Series`, the internal collection maintains a lot fewer buckets than the actual documents, which directly translates to **performance boost** combined with smart indexing
 - Not only `Wired-Tiger` compression, `Time Series` compresses data columns in an optimal way for each data type, which leads to less than a tenth of storage size  
-  Less storage means **smaller disk**, **little backup**, and **littel disk IO**. All must help save cost both in finance and performance
+  Less storage means **smaller disk**, **less backup**, and **less disk IO**. All must help save cost both in finance and performance
 - Whereas regular collections require separate indexes to optimize specific queries, `Time Series` can handle more queries with less index, usually for meta and time fields only.  
-  It in turn translates to littel write-overhead caused by indexes. Take int the nature of IoT events and you won't miss one of the many values that `Time Series` bring to your applications.
+  It in turn translates to littel write-overhead caused by indexes. Take into account the nature of IoT events and you won't miss one of the many values that `Time Series` bring to your applications.
 
 <br>
 
 ## Query Samples
 
-The repository comes with [test queries](./vsc-playground) that provides sense of how `Time Series` comapres with regular collections.
+The repository comes with [test queries](./vsc-playground) that gives sense of how `Time Series` comapres with regular collections.
 
-> tests are `VS Code` [`MongoDB Playground`](https://www.mongodb.com/docs/mongodb-vscode/playgrounds/) files
+tests are `VS Code` [`MongoDB Playground`](https://www.mongodb.com/docs/mongodb-vscode/playgrounds/) files
 
 - `doc-count.mongodb`
 
@@ -316,9 +316,9 @@ That's the key to this query.
 1. check `max` of `speed` of each bucket
 1. filter out documents over `130 km/h`
 
-As we know now, `TS` manages a lot fewer buckets than actual documents and because it need not check individual bucket element thanks to the `max` in the `control` field.
+As we know now, `TS` manages a lot fewer buckets than actual documents and because it need not check individual bucket element thanks to the `max` in the `control` field, the performance improved dramatically.
 
-Tada~
+Ta-da~
 
 <br>
 
