@@ -1,0 +1,130 @@
+// use("fmsk");
+
+function staGroupByFleet(staGroup) {
+  let group;
+  return staGroup.reduce(function (carry, sta){
+    group = sta.fleet_intg_id;
+    if (carry[group]===undefined) {
+      carry[group] = [];
+    }
+    carry[group].push(sta);
+    return carry;
+  }, {});
+}
+
+function kineGroupByFleet(kineGroup) {
+  let group;
+  return kineGroup.reduce(function (carry, kine){
+    group = kine.vehicle.fleet_intg_id;
+    if (carry[group]===undefined) {
+      carry[group] = [];
+    }
+    carry[group].push(kine);
+    return carry;
+  }, {});
+}
+
+function updateKinematicInfo(staGroup) {
+  let updMany = [];
+  let delOne = [];
+  for (let [fid, gsta] of Object.entries(staGroup)) {
+    // console.log(`[${fid}] : ${JSON.stringify(gsta)}`); continue;
+    for (let [i, st] of Object.entries(gsta)) {
+      // console.log(`>> [${fid}][${i}] : [${JSON.stringify(st)}]`);
+      if (i==0) { // last
+        updMany.push({
+          updateMany: {
+            filter: {
+              'vehicle.fleet_intg_id': parseInt(fid),
+              timestamp_iso: {$gte: st.timestamp_iso},
+              status: {$exists: false}
+            },
+            update: { $set: { status: {...st} } }
+          }
+        });
+      } else if (i==1) { // second last
+        const last = gsta[0];
+        updMany.push({
+          updateMany: {
+            filter: {
+              'vehicle.fleet_intg_id': parseInt(fid),
+              timestamp_iso: {$gte: st.timestamp_iso, $lt: last.timestamp_iso},
+              status: {$exists: false}
+            },
+            update: { $set: { status: {...st} } }
+          }
+        });
+        delOne.push({
+          deleteOne: {
+            filter: {
+              'fleet_intg_id': parseInt(fid),
+              timestamp_iso: {$lte: st.timestamp_iso}
+            }
+          }
+        });
+      }
+    }
+  }
+  console.log(`updMany: ${updMany.length}`);
+  if (updMany.length===0) {
+    return [ false, undefined ];
+  } else {
+    const resUp = db.kinematic_info.bulkWrite(updMany);
+    console.log(`nMatch: ${resUp.matchedCount} | nModify: ${resUp.modifiedCount}`);
+    return [ resUp.matchedCount > 0 && resUp.matchedCount==resUp.modifiedCount, delOne];
+    // return [ false, undefined ];
+  }
+}
+
+function insertKinematicInfo(kineGroup) {
+  let insMany = [];
+  let delMany = []
+  for (let [fid, gkine] of Object.entries(kineGroup)) {
+    // console.log(`[${fid}] : ${gkine.length}`); continue;
+    for (let kine of gkine) {
+      insMany.push(kine);
+    }
+    delMany.push({
+      deleteMany: {
+        filter: {
+          'vehicle.fleet_intg_id': parseInt(fid),
+          status: {$exists: true}
+        }
+      }
+    });
+  }
+
+  const res = db.kinematic_join.insertMany(insMany);
+  console.log(`ack: ${res.acknowledged} | nIns: ${res.insertedCount}`);
+  if (res.acknowledged) {
+    return [true, delMany];
+  } else {
+    return [false, null];
+  }
+}
+
+const startTime = new Date().getTime()
+/******************************************/
+
+const sta = db.status.find({
+  fleet_intg_id: {$gte:1, $lte:1000},
+  status: {$exists: false}
+} // ,{ _id:0, fleet_intg_id:1, timestamp_iso:1 }
+).sort({fleet_intg_id:1, timestamp_iso:-1}).toArray();
+const [uack, delOne] = updateKinematicInfo(staGroupByFleet(sta));
+if (uack) {
+  db.status.bulkWrite(delOne);
+}
+
+const kine = db.kinematic_info.find({
+  'vehicle.fleet_intg_id': {$gte:1, $lte: 1000},
+  status: {$exists: true}
+}).sort({'vehicle.fleet_intg_id':1, timestamp_iso:1}).toArray();
+const [iack, delMany] = insertKinematicInfo(kineGroupByFleet(kine));
+if (iack) {
+  db.kinematic_info.bulkWrite(delMany);
+}
+
+/******************************************/
+const endTime = new Date().getTime()
+console.log(`Execution Time: ${endTime - startTime}`)

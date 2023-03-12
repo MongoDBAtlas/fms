@@ -1,0 +1,124 @@
+// use("fmsk");
+db.status.deleteMany({})
+db.kinematic_info.deleteMany({});
+db.kinematic_join.deleteMany({});
+
+let sta =
+{
+  command_id: null,
+  customer_id: 1000,
+  fleet_intg_id: "02",
+  command_result: null,
+  messaged_at: "2023-02-22T16:13:35+09:00",
+  vin: "AAAZCX7KAFU392935",
+  type: "status",
+  command: "get_status",
+  object: "vehicle",
+  timestamp_iso: Date(),
+  fuel_percent: -2, 
+  odometer: 0,
+  distance: 0,
+  fuel_level: 0,
+  loc: { // lng: 126.932837, lat: 37.616364,
+      type: "Point", coordinates: [0.0, 0.0]
+  },  
+  charge_level: -2, 
+  speed: 0,
+  voltage: 14.48,
+  charge_percent: -2, 
+  engine: "ON",
+  charge_state: "NONE",
+  charger_connect: "NONE",
+};
+
+let kine =
+{
+  vehicle: {
+    customer_id: 0,
+    fleet_intg_id: 0
+  },
+  command_id: null,
+  command_result: null,
+  messaged_at: "2023-02-22T16:13:36+09:00",
+  vin: "AAAZCX7KAFU392935",
+  type: "kinematic", 
+  command: "kinematic_info",
+  object: "vehicle",
+  timestamp_iso: Date(),
+  speed: 0,
+  rpm: 0,
+  loc: { // lng: 0.0, lat: 0.0,
+      type: "Point", coordinates: [0.0, 0.0]
+  },  
+  accmag: {
+      heading: 0,
+      hz: 20, 
+      x: [0.746,0.725,0.723,0.748,0.727,0.771,0.737,0.773,0.779,0.754,0.706,0.71,0.71,0.71,0.71,0.71,0.71,0.71,0.71,0.71],
+      y: [0.045,0.119,0.163,0.182,0.229,0.248,0.188,0.15,0.161,0.188,0.163,0.062,0.062,0.062,0.062,0.062,0.062,0.062,0.062,0.062],
+      z: [0.503,0.514,0.558,0.53,0.537,0.604,0.647,0.632,0.638,0.606,0.585,0.562,0.562,0.562,0.562,0.562,0.562,0.562,0.562,0.562],
+  }
+};
+
+function gen_status() {
+  let arrSta = [];
+  for (let fi=1; fi<=10000; fi++) {
+    arrSta.push({
+      ...sta,
+      customer_id: fi%100,
+      fleet_intg_id: fi,
+      timestamp_iso: new Date()
+    });
+  }
+  db.status.insertMany(arrSta);
+}
+
+const startTime = new Date().getTime()
+let arrins = [], total=0;
+for (let ti=0; ti < 64; ti++) {
+  if (ti===0) {
+    gen_status();
+  }
+  for (let fi=1; fi<=10000; fi++) {
+    kine.vehicle.customer_id = fi%100;
+    kine.vehicle.fleet_intg_id = fi;
+    kine.timestamp_iso = new Date();
+    arrins.push({
+      ...kine,
+      vehicle: {customer_id: fi%100, fleet_intg_id: fi},
+      timestamp_iso: new Date()
+    });
+  }
+  if (ti===60) {
+    gen_status();
+  }
+
+  const res = db.kinematic_info.insertMany(arrins);
+  total += Object.keys(res.insertedIds).length;
+  console.log(`round[${ti+1}] nIns: ${total}`);
+  arrins = [];
+}
+
+const endTime = new Date().getTime()
+console.log(`total nIns: ${total} / elapsed: ${endTime - startTime}`);
+
+/******* DEBUG *******/
+// const ressta = db.status.find(
+//   {fleet_intg_id: {$in: [33, 101, 5239, 9999]}},
+//   {_id:0, fleet_intg_id:1, timestamp_iso:1}
+// ).sort({fleet_intg_id: 1, timestamp_iso: 1});
+// ressta.forEach(d => {
+//   console.log(JSON.stringify(d));
+// });
+
+// const pipekine=[
+//   {
+//     $group: {
+//       _id: '$vehicle.fleet_intg_id',
+//       nDoc: { $sum: 1 }
+//     }
+//   }
+// ];
+// const reskine = db.kinematic_info.aggregate(pipekine);
+// reskine.forEach(d => {
+//   console.log(JSON.stringify(d));
+// })
